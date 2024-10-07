@@ -36,7 +36,7 @@ public class ClientUDP : MonoBehaviour
         //we are going to send a message to establish our communication so we need an endpoint
         //We need the server's IP and the port we've binded it to before
         //Again, initialize the socket
-        IPEndPoint ipep = new IPEndPoint(IPAddress.Parse("192.168.206.14"), 9050);
+        IPEndPoint ipep = new IPEndPoint(IPAddress.Parse("192.168.206.17"), 9050);
 
         socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
@@ -46,7 +46,7 @@ public class ClientUDP : MonoBehaviour
         //as a parameter on it's SendTo() method
 
         byte[] data = new byte[1024];
-        string handshake = "Hello World";
+        string handshake = "pinga 1";
 
         try
         {
@@ -62,7 +62,7 @@ public class ClientUDP : MonoBehaviour
         //We'll wait for a server response,
         //so you can already start the receive thread
         Thread receive = new Thread(Receive);
-        receive.Start(ipep);
+        receive.Start();
 
     }
 
@@ -76,8 +76,8 @@ public class ClientUDP : MonoBehaviour
         byte[] data = new byte[1024];
         int recv = socket.ReceiveFrom(data, ref Remote);
 
-        //clientText = ("Message received from {0}: " + Remote.ToString());
-        //clientText = clientText += "\n" + Encoding.ASCII.GetString(data, 0, recv);
+        clientText = ("Message received from {0}: " + Remote.ToString());
+        clientText = clientText += "\n" + Encoding.ASCII.GetString(data, 0, recv);
 
     }
 

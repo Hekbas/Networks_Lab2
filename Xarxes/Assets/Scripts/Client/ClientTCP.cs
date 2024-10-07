@@ -4,7 +4,7 @@ using System.Text;
 using UnityEngine;
 using System.Threading;
 using TMPro;
-using UnityEngine.tvOS;
+//using UnityEngine.tvOS;
 
 public class ClientTCP : MonoBehaviour
 {
@@ -41,9 +41,16 @@ public class ClientTCP : MonoBehaviour
         //When calling connect and succeeding, our server socket will create a
         //connection between this endpoint and the server's endpoint
 
-        IPEndPoint ipep = new IPEndPoint(IPAddress.Parse("192.168.206.15"), 9050);
+        IPEndPoint ipep = new IPEndPoint(IPAddress.Parse("192.168.206.17"), 9050);
         server = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
+        try{
+            server.Connect(ipep);
+        }
+        catch (SocketException e){
+            clientText += "\nError trying to connect to server.";
+            return;
+        }
         //TO DO 4
         //With an established connection, we want to send a message so the server aacknowledges us
         //Start the Send Thread
@@ -61,6 +68,7 @@ public class ClientTCP : MonoBehaviour
         //TO DO 4
         //Using the socket that stores the connection between the 2 endpoints, call the TCP send function with
         //an encoded message
+        clientText += "\n Sending message...";
         byte[] data = Encoding.ASCII.GetBytes(clientText);
 
         server.Send(data);
@@ -75,7 +83,7 @@ public class ClientTCP : MonoBehaviour
 
         recv = server.Receive(data);
 
-        clientText = clientText += "\n" + Encoding.ASCII.GetString(data, 0, recv);
+        clientText += "\n" + Encoding.ASCII.GetString(data, 0, recv);
     }
 
 }

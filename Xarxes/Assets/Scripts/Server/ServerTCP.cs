@@ -45,7 +45,7 @@ public class ServerTCP : MonoBehaviour
         //Don't forget to set the socket in listening mode
         socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-        IPEndPoint localEp = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9050);
+        IPEndPoint localEp = new IPEndPoint(IPAddress.Any, 9050);
         socket.Bind(localEp);
 
         socket.Listen(10);
@@ -76,7 +76,7 @@ public class ServerTCP : MonoBehaviour
 
             newUser.socket = socket.Accept(); ;//accept the socket
 
-            IPEndPoint clientep = (IPEndPoint)socket.RemoteEndPoint;
+            IPEndPoint clientep = (IPEndPoint)newUser.socket.RemoteEndPoint;
             serverText = serverText + "\n"+ "Connected with " + clientep.Address.ToString() + " at port " + clientep.Port.ToString();
             Debug.Log(serverText);
             //TO DO 5

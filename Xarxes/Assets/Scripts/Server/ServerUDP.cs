@@ -5,7 +5,7 @@ using UnityEngine;
 using System.Threading;
 using TMPro;
 using System;
-using UnityEngine.tvOS;
+//using UnityEngine.tvOS;
 
 public class ServerUDP : MonoBehaviour
 {
