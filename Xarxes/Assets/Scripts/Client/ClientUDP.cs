@@ -57,11 +57,11 @@ public class ClientUDP : MonoBehaviour
 
     public void StartClient()
     {
-        Thread mainThread = new Thread(Synchronize);
+        Thread mainThread = new Thread(Connect);
         mainThread.Start();
     }
 
-    void Synchronize()
+    void Connect()
     {
         try
         {
@@ -74,13 +74,9 @@ public class ClientUDP : MonoBehaviour
             throw;
         }
 
-        string handshake = nickname.text;
-        byte[] data = new byte[1024];
-        data = Encoding.ASCII.GetBytes(handshake);
-
         try
         {
-            socket.SendTo(data, SocketFlags.None, ipep);
+            SendConnectionRequest(nickname.text);
         }
         catch (SocketException e)
         {
@@ -89,46 +85,58 @@ public class ClientUDP : MonoBehaviour
         }
 
         cs = connection_status.initialize;
-        Thread receive = new Thread(Acknowledgement);
+        Thread receive = new Thread(Receive);
         receive.Start();
     }
 
-    void Acknowledgement()
+    void Receive()
     {
-        IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-        EndPoint Remote = (EndPoint)(sender);
+        IPEndPoint sender = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 0); // change to ui_serverIP
+        EndPoint remote = (EndPoint)sender;
         byte[] data = new byte[1024];
 
-        try
+        while (true)
         {
-            while (cs != connection_status.shutdown)
+            int recv = socket.ReceiveFrom(data, ref remote);
+            if (recv > 0)
             {
-                int recv = socket.ReceiveFrom(data, ref Remote);
-                if (recv > 0)
+                string receivedMessage = Encoding.ASCII.GetString(data, 0, recv);
+
+                // Handle different message types
+                if (receivedMessage.StartsWith("CHAT:"))
                 {
-                    string receivedMessage = Encoding.ASCII.GetString(data, 0, recv);
-                    clientText += $"\nMessage received from {Remote}: {receivedMessage}";
+                    // Extract chat message and update the chat UI
+                    string chatMessage = receivedMessage.Substring("CHAT:".Length);
+                    clientText += "\n" + chatMessage; // Add the chat message to the UI
+                }
+                else
+                {
+                    // General message (e.g., connection acknowledgment)
+                    clientText += "\n" + receivedMessage; // Display the received message in the UI
                 }
             }
         }
-        catch (SocketException e)
-        {
-            clientText += $"Error receiving data: {e}\n";
-        }
-        finally
-        {
-            socket?.Close();
-        }
     }
+
+    public void SendConnectionRequest(string playerName)
+    {
+        // Prefix connection requests with "CONNECT:"
+        string connectionRequest = "CONNECT:" + playerName;
+
+        byte[] data = Encoding.ASCII.GetBytes(connectionRequest);
+        socket.SendTo(data, ipep);
+    }
+
 
     // ----------- Loby chat ----------- //
     public void SendChatMessage(string message, string sender = null)
     {
         if (string.IsNullOrWhiteSpace(message)) return;
 
-        string s = sender + ": " + message;
+        // Prefix chat messages with "CHAT:"
+        string s = "CHAT:" + message;
 
-        byte[] data = Encoding.ASCII.GetBytes(message);
+        byte[] data = Encoding.ASCII.GetBytes(s);
         socket.SendTo(data, ipep);
     }
 
@@ -137,4 +145,5 @@ public class ClientUDP : MonoBehaviour
         SendChatMessage(chat_message.text, nickname.text);
         Debug.Log(this.chat_message.text);
     }
+
 }

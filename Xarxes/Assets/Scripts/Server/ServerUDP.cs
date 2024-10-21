@@ -6,12 +6,13 @@ using System.Threading;
 using TMPro;
 using System;
 using System.Collections.Generic;
-//using UnityEngine.tvOS;
+using System.Linq;
+
 
 public class ServerUDP : MonoBehaviour
 {
     Socket socket;
-    List<EndPoint> clients = new List<EndPoint>();
+    List<Client> players = new List<Client>();
     object lockObj = new object();
 
     public GameObject UItextObj;
@@ -19,6 +20,13 @@ public class ServerUDP : MonoBehaviour
 
     [SerializeField] private TMP_InputField serverName;
     string serverText;
+
+    struct Client
+    {
+        public IPEndPoint ep;
+        public string name;
+    }
+
 
     void Start()
     {
@@ -55,7 +63,7 @@ public class ServerUDP : MonoBehaviour
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             socket.Bind(ipep);
 
-            Thread newConnection = new Thread(Synchronize);
+            Thread newConnection = new Thread(Receive);
             newConnection.Start();
         }
         catch (Exception ex)
@@ -64,11 +72,12 @@ public class ServerUDP : MonoBehaviour
         }
     }
 
-    void Synchronize()
+
+    void Receive()
     {
         byte[] data = new byte[1024];
         IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-        EndPoint Remote = (EndPoint)(sender);
+        EndPoint remote = (EndPoint)(sender);
 
         lock (lockObj)
         {
@@ -80,36 +89,50 @@ public class ServerUDP : MonoBehaviour
             try
             {
                 // Receive data from the socket
-                int recv = socket.ReceiveFrom(data, ref Remote);
+                int recv = socket.ReceiveFrom(data, ref remote);
                 string receivedMessage = Encoding.ASCII.GetString(data, 0, recv);
 
                 if (recv > 0)
                 {
                     lock (lockObj)
                     {
-                        serverText += "\n" + $"Message received from {Remote}: {receivedMessage}";
+                        serverText += $"\nMessage received from {remote}: {receivedMessage}";
                     }
 
-                    // Check if the client is new, add to the list if so
-                    lock (lockObj)
+                    // Check message type (CONNECT or CHAT)
+                    if (receivedMessage.StartsWith("CONNECT:"))
                     {
-                        if (!clients.Contains(Remote))
-                        {
-                            clients.Add(Remote);
-                            serverText += "\n" + $"New client connected: {Remote}";
-                        }
-                    }
+                        // Extract player name
+                        string playerName = receivedMessage.Substring("CONNECT:".Length);
 
-                    // Respond to the client
-                    Thread answer = new Thread(() => Acknowledgement(Remote));
-                    answer.Start();
+                        // Check if client is already in the list, if not, add to the list
+                        lock (lockObj)
+                        {
+                            if (CheckConnectedPlayers(sender, playerName))
+                            {
+                                players.Add(new Client { ep = sender, name = playerName });
+                                serverText += $"\nNew client connected: {playerName} ({remote})";
+                            }
+                        }
+
+                        // Acknowledge connection
+                        SendToClient($"Welcome, {playerName}!", remote);
+                    }
+                    else if (receivedMessage.StartsWith("CHAT:"))
+                    {
+                        // Extract chat message
+                        string chatMessage = receivedMessage.Substring("CHAT:".Length);
+
+                        // Broadcast the chat message to all clients
+                        BroadcastMessage(chatMessage, remote);
+                    }
                 }
             }
             catch (SocketException ex)
             {
                 lock (lockObj)
                 {
-                    serverText += "\n" + $"Error receiving data: {ex.Message}";
+                    serverText += $"\nError receiving data: {ex.Message}";
                 }
             }
         }
@@ -124,15 +147,52 @@ public class ServerUDP : MonoBehaviour
             socket.SendTo(data, Remote);
             lock (lockObj)
             {
-                serverText += "\n" + $"Sent confirmation to {Remote}";
+                serverText += $"\nSent confirmation to {Remote}";
             }
         }
         catch (SocketException ex)
         {
             lock (lockObj)
             {
-                serverText += "\n" + $"Error sending data to {Remote}: {ex.Message}";
+                serverText += $"\nError sending data to {Remote}: {ex.Message}";
             }
         }
+    }
+
+    // Method to send a message to a specific client
+    void SendToClient(string message, EndPoint remote)
+    {
+        byte[] data = Encoding.ASCII.GetBytes(message);
+        socket.SendTo(data, remote);
+    }
+
+    // Method to broadcast a chat message to all clients except the sender
+    void BroadcastMessage(string message, EndPoint sender)
+    {
+        lock (lockObj)
+        {
+            byte[] data = Encoding.ASCII.GetBytes($"CHAT:{message}");
+
+            foreach (var player in players)
+            {
+                //if (!player.Equals(sender))
+                //{
+                //}
+                try
+                {
+                    socket.SendTo(data, player.ep);
+                    serverText += $"\nBroadcasted message to {player}";
+                }
+                catch (SocketException ex)
+                {
+                    serverText += $"\nError sending data to {player}: {ex.Message}";
+                }
+            }
+        }
+    }
+
+    bool CheckConnectedPlayers(IPEndPoint endpoint, string name)
+    {
+        return players.Any(client => client.ep.Equals(endpoint) && client.name == name);
     }
 }
