@@ -5,11 +5,14 @@ using UnityEngine;
 using System.Threading;
 using TMPro;
 using System;
+using System.Collections.Generic;
 //using UnityEngine.tvOS;
 
 public class ServerUDP : MonoBehaviour
 {
     Socket socket;
+    List<EndPoint> clients = new List<EndPoint>();
+    object lockObj = new object();
 
     public GameObject UItextObj;
     TextMeshProUGUI UItext;
@@ -24,7 +27,10 @@ public class ServerUDP : MonoBehaviour
 
     void Update()
     {
-        UItext.text = serverText;
+        lock (lockObj)
+        {
+            UItext.text = serverText;
+        }
     }
 
     private void OnDestroy()
@@ -49,7 +55,7 @@ public class ServerUDP : MonoBehaviour
         int recv = 0;
         byte[] data = new byte[1024];
         
-        serverText = serverText + "\n" + "Waiting for new Client...";
+        serverText += "\n" + "Waiting for new Client...";
 
         IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
         EndPoint Remote = (EndPoint)(sender);
@@ -64,8 +70,8 @@ public class ServerUDP : MonoBehaviour
                 break;
             else
             {
-                serverText += serverText + "\n" + "Message received from {0}:" + Remote.ToString();
-                serverText += serverText + "\n" + Encoding.ASCII.GetString(data, 0, recv);
+                serverText += "\n" + $"Message received from {Remote}: ";
+                serverText += Encoding.ASCII.GetString(data, 0, recv);
             }
 
             //answer
@@ -77,11 +83,9 @@ public class ServerUDP : MonoBehaviour
 
     void Send(EndPoint Remote)
     {
-        //TO DO 4
-        //Use socket.SendTo to send a ping using the remote we stored earlier.
         byte[] data = new byte[1024];
-        data = Encoding.ASCII.GetBytes("General Kenobi!");
-        //data = Encoding.ASCII.GetBytes("Server name: " + serverName);
+        //data = Encoding.ASCII.GetBytes("General Kenobi!");
+        data = Encoding.ASCII.GetBytes($"Successfully connected to: {serverName}");
 
         socket.SendTo(data, Remote);
     }

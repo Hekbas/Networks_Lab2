@@ -7,21 +7,22 @@ using TMPro;
 
 public class ClientUDP : MonoBehaviour
 {
-    Socket socket;
-    public GameObject UItextObj;
-    TextMeshProUGUI UItext;
+    private Socket socket;
+    [SerializeField] private GameObject ui_text_obj;
+    private TextMeshProUGUI ui_text;
+    [SerializeField] public GameObject ui_inputfield_obj;
+    string ui_serverIP;
     string clientText;
 
-    // Start is called before the first frame update
+
     void Start()
     {
-        UItext = UItextObj.GetComponent<TextMeshProUGUI>();
-
+        ui_text = ui_text_obj.GetComponent<TextMeshProUGUI>();
     }
 
     void Update()
     {
-        UItext.text = clientText;
+        ui_text.text = clientText;
     }
 
     private void OnDestroy()
@@ -37,14 +38,31 @@ public class ClientUDP : MonoBehaviour
 
     void Send()
     {
-        IPEndPoint ipep = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9050);
-        socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        IPEndPoint ipep = new IPEndPoint(IPAddress.Parse(ui_serverIP.ToString()), 9050);
+
+        try
+        {
+            socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        }
+        catch (SocketException e)
+        {
+            clientText += $"Error trying to connect to server {ui_serverIP}: {e}\n";
+            throw;
+        }
 
         string handshake = "Hello there";
         byte[] data = new byte[1024];
         data = Encoding.ASCII.GetBytes(handshake);
 
-        socket.SendTo(data, SocketFlags.None, ipep);
+        try
+        {
+            socket.SendTo(data, SocketFlags.None, ipep);
+        }
+        catch (SocketException e)
+        {
+            clientText += $"Error trying to connect to server {ui_serverIP}: {e}\n";
+            throw;
+        }
 
         Thread receive = new Thread(Receive);
         receive.Start();
@@ -53,13 +71,18 @@ public class ClientUDP : MonoBehaviour
 
     void Receive()
     {
-        Debug.Log("Recieve!");
         IPEndPoint sender = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 0);
         EndPoint Remote = (EndPoint)(sender);
         byte[] data = new byte[1024];
         int recv = socket.ReceiveFrom(data, ref Remote);
 
-        clientText += ("Message received from {0}: " + Remote.ToString());
-        clientText += "\n" + Encoding.ASCII.GetString(data, 0, recv);
+        clientText += $"Message received from {Remote}: ";
+        clientText += Encoding.ASCII.GetString(data, 0, recv) + "\n";
+    }
+
+    public void ReadInput(string s)
+    {
+        ui_serverIP = s;
+        Debug.Log(ui_serverIP);
     }
 }
