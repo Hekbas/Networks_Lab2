@@ -16,13 +16,13 @@ public class ServerUDP : MonoBehaviour
 
     public GameObject UItextObj;
     TextMeshProUGUI UItext;
-    string serverName;
+
+    [SerializeField] private TMP_InputField serverName;
     string serverText;
 
     void Start()
     {
         UItext = UItextObj.GetComponent<TextMeshProUGUI>();
-        serverName = "Moss Eisley Canteen";
     }
 
     void Update()
@@ -38,55 +38,101 @@ public class ServerUDP : MonoBehaviour
         socket?.Close();
     }
 
-    public void startServer()
+    public void StartServer()
     {
-        serverText = "Starting UDP Server...";
-
-        IPEndPoint ipep = new IPEndPoint(IPAddress.Any, 9050);
-        socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-        socket.Bind(ipep);
-
-        Thread newConnection = new Thread(Receive);
-        newConnection.Start();
-    }
- 
-    void Receive()
-    {
-        int recv = 0;
-        byte[] data = new byte[1024];
-        
-        serverText += "\n" + "Waiting for new Client...";
-
-        IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-        EndPoint Remote = (EndPoint)(sender);
-        
-        while (true)
+        Debug.Log("Starting Server...");
+        try
         {
-            // Receive data from the socket
-            recv = socket.ReceiveFrom(data, ref Remote);
-            string receivedMessage = Encoding.ASCII.GetString(data, 0, recv);
-
-            if (recv == 0)
-                break;
-            else
+            if (string.IsNullOrEmpty(serverName.text))
             {
-                serverText += "\n" + $"Message received from {Remote}: ";
-                serverText += Encoding.ASCII.GetString(data, 0, recv);
+                serverText = "Server name is not assigned. Please set a server name before starting the server.";
+                throw new Exception("Server name is not assigned. Please set a server name before starting the server.");
             }
 
-            //answer
-            Thread answer = new Thread(() => Send(Remote));
-            answer.Start();
-        }
+            serverText = $"Starting UDP Server... Server name: {serverName.text}";
 
+            IPEndPoint ipep = new IPEndPoint(IPAddress.Any, 9050);
+            socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            socket.Bind(ipep);
+
+            Thread newConnection = new Thread(Synchronize);
+            newConnection.Start();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Failed to start the server: {ex.Message}");
+        }
     }
 
-    void Send(EndPoint Remote)
+    void Synchronize()
     {
         byte[] data = new byte[1024];
-        //data = Encoding.ASCII.GetBytes("General Kenobi!");
-        data = Encoding.ASCII.GetBytes($"Successfully connected to: {serverName}");
+        IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
+        EndPoint Remote = (EndPoint)(sender);
 
-        socket.SendTo(data, Remote);
+        lock (lockObj)
+        {
+            serverText += "\n" + "Waiting for new Client...";
+        }
+
+        while (true)
+        {
+            try
+            {
+                // Receive data from the socket
+                int recv = socket.ReceiveFrom(data, ref Remote);
+                string receivedMessage = Encoding.ASCII.GetString(data, 0, recv);
+
+                if (recv > 0)
+                {
+                    lock (lockObj)
+                    {
+                        serverText += "\n" + $"Message received from {Remote}: {receivedMessage}";
+                    }
+
+                    // Check if the client is new, add to the list if so
+                    lock (lockObj)
+                    {
+                        if (!clients.Contains(Remote))
+                        {
+                            clients.Add(Remote);
+                            serverText += "\n" + $"New client connected: {Remote}";
+                        }
+                    }
+
+                    // Respond to the client
+                    Thread answer = new Thread(() => Acknowledgement(Remote));
+                    answer.Start();
+                }
+            }
+            catch (SocketException ex)
+            {
+                lock (lockObj)
+                {
+                    serverText += "\n" + $"Error receiving data: {ex.Message}";
+                }
+            }
+        }
+    }
+
+    void Acknowledgement(EndPoint Remote)
+    {
+        byte[] data = Encoding.ASCII.GetBytes($"Successfully connected to: {serverName.text}");
+
+        try
+        {
+            socket.SendTo(data, Remote);
+            lock (lockObj)
+            {
+                serverText += "\n" + $"Sent confirmation to {Remote}";
+            }
+        }
+        catch (SocketException ex)
+        {
+            lock (lockObj)
+            {
+                serverText += "\n" + $"Error sending data to {Remote}: {ex.Message}";
+            }
+        }
     }
 }
