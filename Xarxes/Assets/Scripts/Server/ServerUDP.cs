@@ -23,7 +23,7 @@ public class ServerUDP : MonoBehaviour
 
     struct Client
     {
-        public IPEndPoint ep;
+        public EndPoint ep;
         public string name;
     }
 
@@ -108,9 +108,9 @@ public class ServerUDP : MonoBehaviour
                         // Check if client is already in the list, if not, add to the list
                         lock (lockObj)
                         {
-                            if (CheckConnectedPlayers(sender, playerName))
+                            if (!CheckConnectedPlayers(remote, playerName))
                             {
-                                players.Add(new Client { ep = sender, name = playerName });
+                                players.Add(new Client { ep = remote, name = playerName });
                                 serverText += $"\nNew client connected: {playerName} ({remote})";
                             }
                         }
@@ -138,7 +138,7 @@ public class ServerUDP : MonoBehaviour
         }
     }
 
-    void Acknowledgement(EndPoint Remote)
+    void Send(EndPoint Remote)
     {
         byte[] data = Encoding.ASCII.GetBytes($"Successfully connected to: {serverName.text}");
 
@@ -159,14 +159,12 @@ public class ServerUDP : MonoBehaviour
         }
     }
 
-    // Method to send a message to a specific client
     void SendToClient(string message, EndPoint remote)
     {
         byte[] data = Encoding.ASCII.GetBytes(message);
         socket.SendTo(data, remote);
     }
 
-    // Method to broadcast a chat message to all clients except the sender
     void BroadcastMessage(string message, EndPoint sender)
     {
         lock (lockObj)
@@ -175,13 +173,10 @@ public class ServerUDP : MonoBehaviour
 
             foreach (var player in players)
             {
-                //if (!player.Equals(sender))
-                //{
-                //}
                 try
                 {
                     socket.SendTo(data, player.ep);
-                    serverText += $"\nBroadcasted message to {player}";
+                    serverText += $"\n[{sender}]: {message}";
                 }
                 catch (SocketException ex)
                 {
@@ -191,7 +186,7 @@ public class ServerUDP : MonoBehaviour
         }
     }
 
-    bool CheckConnectedPlayers(IPEndPoint endpoint, string name)
+    bool CheckConnectedPlayers(EndPoint endpoint, string name)
     {
         return players.Any(client => client.ep.Equals(endpoint) && client.name == name);
     }

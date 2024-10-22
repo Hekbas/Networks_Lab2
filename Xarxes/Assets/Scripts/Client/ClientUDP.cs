@@ -10,17 +10,18 @@ public class ClientUDP : MonoBehaviour
     private Socket socket;
     private IPEndPoint ipep;
 
-    [SerializeField] private GameObject ui_text_obj;
-    [SerializeField] private GameObject ui_inputfield_obj;
-
-    private TextMeshProUGUI ui_text;
-    private string clientText;
-
     [SerializeField] private GameObject ui_chat_obj;
+    [SerializeField] private GameObject ui_inputfield_obj;
+    [SerializeField] private GameObject ui_text_client_obj;
+    [SerializeField] private GameObject ui_text_chat_obj;
+    TextMeshProUGUI ui_text_client;
+    TextMeshProUGUI ui_text_chat;
+    string clientText;
+    string chatText;
+
     [SerializeField] private TMP_InputField nickname;
     [SerializeField] private TMP_InputField serverIP;
     [SerializeField] private TMP_InputField chat_message;
-    [SerializeField] private TMP_Text online_players;
 
 
     enum connection_status
@@ -35,7 +36,10 @@ public class ClientUDP : MonoBehaviour
 
     void Start()
     {
-        ui_text = ui_text_obj.GetComponent<TextMeshProUGUI>();
+        clientText = "";
+        chatText = "";
+        ui_text_client = ui_text_client_obj.GetComponent<TextMeshProUGUI>();
+        ui_text_chat = ui_text_chat_obj.GetComponent<TextMeshProUGUI>();
     }
 
     void Update()
@@ -46,7 +50,8 @@ public class ClientUDP : MonoBehaviour
             cs = connection_status.connected;
         }
 
-        ui_text.text = clientText;
+        ui_text_client.text = clientText;
+        ui_text_chat.text = chatText;
     }
 
     private void OnDestroy()
@@ -91,8 +96,7 @@ public class ClientUDP : MonoBehaviour
 
     void Receive()
     {
-        IPEndPoint sender = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 0); // change to ui_serverIP
-        EndPoint remote = (EndPoint)sender;
+        EndPoint remote = (EndPoint)ipep;
         byte[] data = new byte[1024];
 
         while (true)
@@ -107,12 +111,12 @@ public class ClientUDP : MonoBehaviour
                 {
                     // Extract chat message and update the chat UI
                     string chatMessage = receivedMessage.Substring("CHAT:".Length);
-                    clientText += "\n" + chatMessage; // Add the chat message to the UI
+                    chatText += $"\n {remote} > {chatMessage}";
                 }
                 else
                 {
                     // General message (e.g., connection acknowledgment)
-                    clientText += "\n" + receivedMessage; // Display the received message in the UI
+                    clientText += "\n" + receivedMessage;
                 }
             }
         }

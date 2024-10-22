@@ -12182,13 +12182,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ded76a535ab860498072928ea7a5925, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ui_text_obj: {fileID: 319565167}
-  ui_inputfield_obj: {fileID: 163682157}
   ui_chat_obj: {fileID: 1709640903}
+  ui_inputfield_obj: {fileID: 163682157}
+  ui_text_client_obj: {fileID: 319565167}
+  ui_text_chat_obj: {fileID: 1480023684}
   nickname: {fileID: 567538823}
   serverIP: {fileID: 163682159}
   chat_message: {fileID: 1295500740}
-  online_players: {fileID: 0}
 --- !u!1 &1328161026
 GameObject:
   m_ObjectHideFlags: 0
@@ -13962,7 +13962,7 @@ RectTransform:
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 488.62, y: 0}
+  m_SizeDelta: {x: 294, y: 0}
   m_Pivot: {x: 1, y: 1}
 --- !u!114 &1480023686
 MonoBehaviour:
@@ -14037,7 +14037,7 @@ MonoBehaviour:
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
-  m_lineSpacing: 1
+  m_lineSpacing: 0
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
@@ -14074,7 +14074,7 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1480023684}
-  m_CullTransparentMesh: 1
+  m_CullTransparentMesh: 0
 --- !u!1001 &1494479431
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -16385,7 +16385,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1709640904
 RectTransform:
   m_ObjectHideFlags: 0
